@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local disposable Postgres for Operator DX (not an ADR; ADR-0072).
 # Usage:
-#   ./scripts/oauth-storage.sh create|ensure|remove --env dev|test
+#   ./scripts/storage.sh create|ensure|remove --env dev|test
 # Then:
 #   set -a && source .local/oauth-storage/<env>.env && set +a
 # shellcheck shell=bash
@@ -23,7 +23,7 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat >&2 <<'EOF'
-Usage: oauth-storage.sh create|ensure|remove --env dev|test
+Usage: storage.sh create|ensure|remove --env dev|test
 
   create   Create a fresh container+volume, bootstrap app role, write env file (fails if present)
   ensure   Create if missing; start if stopped; require env file

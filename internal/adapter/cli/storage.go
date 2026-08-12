@@ -17,10 +17,11 @@ func newStorageCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "storage",
 		Short: "Postgres storage maintenance",
-		Long:  "Postgres app-role bootstrap and connectivity verify for Operators (ADR-0072).",
+		Long:  "Postgres app-role bootstrap, verify, and Storage schema migrate for Operators (ADR-0072, ADR-0074).",
 	}
 	cmd.AddCommand(newStorageBootstrapSQLCommand())
 	cmd.AddCommand(newStorageVerifyCommand())
+	cmd.AddCommand(newStorageMigrateCommand())
 	return cmd
 }
 

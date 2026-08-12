@@ -58,6 +58,8 @@ func baseEnv() []string {
 }
 
 func TestVerifyMissingURL(t *testing.T) {
+	t.Parallel()
+
 	stdout, stderr, code := runOAuth(t, baseEnv(), "storage", "verify")
 	if code == 0 {
 		t.Fatalf("exit = 0, want non-zero; stdout=%q stderr=%q", stdout, stderr)
@@ -68,6 +70,8 @@ func TestVerifyMissingURL(t *testing.T) {
 }
 
 func TestVerifyBadConnection(t *testing.T) {
+	t.Parallel()
+
 	env := append(baseEnv(), "OAUTH_STORAGE_URL=postgres://u:p@127.0.0.1:1/db?sslmode=disable")
 	stdout, stderr, code := runOAuth(t, env, "storage", "verify")
 	if code == 0 {
@@ -79,6 +83,8 @@ func TestVerifyBadConnection(t *testing.T) {
 }
 
 func TestVerifyOK(t *testing.T) {
+	t.Parallel()
+
 	url := strings.TrimSpace(os.Getenv("OAUTH_STORAGE_URL"))
 	if url == "" {
 		t.Fatal("OAUTH_STORAGE_URL is required for TestVerifyOK (run via ./scripts/test-e2e.sh)")

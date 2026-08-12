@@ -10,6 +10,7 @@ readonly PROJECT_ROOT
 MODULE_PACKAGES="./..."
 CMD_PACKAGE="./cmd/oauth"
 E2E_PACKAGES="./e2e/..."
+INTEGRATION_PACKAGES="./integration/..."
 BIN_DIR="${PROJECT_ROOT}/bin"
 BIN_NAME="oauth"
 
@@ -76,9 +77,9 @@ project_quality() {
   project_lint
 }
 
-# unit_packages lists module packages excluding e2e.
+# unit_packages lists module packages excluding e2e and integration.
 unit_packages() {
-  (cd "${PROJECT_ROOT}" && go list ./... | grep -v '/e2e$')
+  (cd "${PROJECT_ROOT}" && go list ./... | grep -vE '/(e2e|integration)$')
 }
 
 # go_test_args_have_package returns 0 if any arg looks like a package pattern.

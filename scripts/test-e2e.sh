@@ -14,7 +14,7 @@ cd "${PROJECT_ROOT}"
 project_quality
 require_go
 
-log "ensure test storage"
+log "ensure e2e test storage"
 "${SCRIPT_DIR}/storage.sh" ensure --env test
 
 env_file="${PROJECT_ROOT}/.local/oauth-storage/test.env"
@@ -25,6 +25,11 @@ source "${env_file}"
 set +a
 [[ -n "${OAUTH_STORAGE_URL:-}" ]] || die "OAUTH_STORAGE_URL not set after sourcing ${env_file}"
 [[ "${OAUTH_STORAGE_ENV:-}" == "test" ]] || die "OAUTH_STORAGE_ENV must be test (got ${OAUTH_STORAGE_ENV:-})"
+
+# ADR-0073 suite bootstrap: ensure → truncate → migrate-to-head.
+# migrate is not implemented yet; truncate is a no-op until tables exist.
+log "truncate e2e test storage (suite bootstrap)"
+"${SCRIPT_DIR}/storage.sh" truncate --env test
 
 mkdir -p "${BIN_DIR}"
 out="${BIN_DIR}/${BIN_NAME}"

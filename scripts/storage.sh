@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local disposable Postgres for Operator DX (not an ADR; ADR-0072).
 # Usage:
-#   ./scripts/storage.sh create|ensure|remove --env dev|test
+#   ./scripts/storage.sh create|ensure|remove|truncate --env dev|test|integration
 # Then:
 #   set -a && source .local/oauth-storage/<env>.env && set +a
 # shellcheck shell=bash
@@ -23,16 +23,17 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat >&2 <<'EOF'
-Usage: storage.sh create|ensure|remove --env dev|test
+Usage: storage.sh create|ensure|remove|truncate --env dev|test|integration
 
-  create   Create a fresh container+volume, bootstrap app role, write env file (fails if present)
-  ensure   Create if missing; start if stopped; require env file
-  remove   Remove container, volume, and env file
+  create    Create a fresh container+volume, bootstrap app role, write env file (fails if present)
+  ensure    Create if missing; start if stopped; require env file
+  remove    Remove container, volume, and env file
+  truncate  Empty all tables in public schema (suite bootstrap; no-op if none)
 
 After create/ensure, load credentials with:
   set -a && source .local/oauth-storage/<env>.env && set +a
 
-Ports: 55432 (dev), 55433 (test). Container names: oauth-storage-<env>.
+Ports: 55432 (dev), 55433 (test), 55434 (integration). Container names: oauth-storage-<env>.
 EOF
 }
 
@@ -60,7 +61,8 @@ host_port() {
   case "$1" in
     dev) printf '55432' ;;
     test) printf '55433' ;;
-    *) die "unknown env: $1 (want dev|test)" ;;
+    integration) printf '55434' ;;
+    *) die "unknown env: $1 (want dev|test|integration)" ;;
   esac
 }
 
@@ -72,7 +74,7 @@ parse_args() {
     case "$1" in
       --env)
         ENV_NAME="${2:-}"
-        [[ -n "${ENV_NAME}" ]] || die "--env requires dev|test"
+        [[ -n "${ENV_NAME}" ]] || die "--env requires dev|test|integration"
         shift 2
         ;;
       -h | --help)
@@ -85,17 +87,17 @@ parse_args() {
     esac
   done
   case "${ACTION}" in
-    create | ensure | remove) ;;
+    create | ensure | remove | truncate) ;;
     *)
       usage
-      die "action required: create|ensure|remove"
+      die "action required: create|ensure|remove|truncate"
       ;;
   esac
   case "${ENV_NAME}" in
-    dev | test) ;;
+    dev | test | integration) ;;
     *)
       usage
-      die "--env required: dev|test"
+      die "--env required: dev|test|integration"
       ;;
   esac
 }
@@ -236,6 +238,28 @@ remove_cluster() {
   fi
 }
 
+
+truncate_app_tables() {
+  local env_name="$1"
+  local cname db
+  cname="$(container_name "${env_name}")"
+  db="${env_name}_oauth"
+
+  require_podman
+  if ! container_exists "${env_name}"; then
+    die "container ${cname} missing; run ensure first"
+  fi
+  if ! container_running "${env_name}"; then
+    die "container ${cname} not running; run ensure first"
+  fi
+
+  log "truncating public tables in ${db}"
+  podman exec "${cname}" \
+    psql -v ON_ERROR_STOP=1 -U "${ROOT_USER}" -d "${db}" \
+    -c "DO \$\$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END \$\$;" \
+    >/dev/null
+}
+
 print_env_hint() {
   local env_name="$1"
   local file
@@ -254,6 +278,9 @@ case "${ACTION}" in
   ensure)
     ensure_cluster "${ENV_NAME}"
     print_env_hint "${ENV_NAME}"
+    ;;
+  truncate)
+    truncate_app_tables "${ENV_NAME}"
     ;;
   remove)
     remove_cluster "${ENV_NAME}"

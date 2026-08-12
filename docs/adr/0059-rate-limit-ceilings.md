@@ -1,0 +1,3 @@
+# Rate limit permissive ceilings at start
+
+Rate limit thresholds and windows remain explicit CLI config with no silent defaults (ADR-0040). At server start, refuse if any configured limit is looser than: login 30/window per IP or 20/window per username; Authorization Endpoint 60/window per IP or 30/window per Client Identifier; Token Endpoint 120/window per IP or 60/window per Client Identifier; global HTTP 300/window per IP. Warn (do not refuse) if login per IP exceeds 10/window. Prevents “mandatory rate limiting” configured into uselessness.

@@ -1,0 +1,3 @@
+# Resource Server verification contract and JWKS cache
+
+Integrators verifying Access Tokens MUST: accept ES256 only; require `iss` equal to the configured Issuer URL; require `aud` equal to the expected Audience; enforce `exp`/`iat` with at most 60 seconds clock skew. The AS serves JWKS with `Cache-Control: public, max-age=300`. The RS remains external (ADR-0001); this ADR locks the verification contract the product assumes so silent RS misconfiguration is not a documentation blindspot. Shorter JWKS cache would increase fetch load; longer would stretch past key-rotation-via-restart (ADR-0043).

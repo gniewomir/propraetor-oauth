@@ -1,0 +1,11 @@
+# User and Client Not-Before; Operator set-not-before
+
+Compromise response is a **Not-Before** watermark on a User or on a Client (separate commands), not per-token revocation. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use, and no new Access Tokens are minted from pre-watermark grants; already-issued Access Tokens at Resource Servers remain valid until exp (ADR-0003, 0047, 0065). Framing is “all tokens” (forward-compatible with ID tokens); v1 still does not issue ID tokens (ADR-0025).
+
+CLI: `oauth user set-not-before` and `oauth client set-not-before`; `--at` is optional, defaults to now, and **now is the only supported value in v1**. Watermarks are **forward-only** in v1: setting again with `--at=now` advances them; clear and backdate are out until a later ADR. Initial unset means no Not-Before restriction.
+
+For artifacts bound to both a User and a Client, **both** watermarks apply (created instant must be ≥ each). Client Credentials checks Client Not-Before only. Enforcement is **reject on use** against the stored watermark; eager delete of pre-watermark rows is not required. Pre-watermark artifacts may remain stored and must not block issuing new post-watermark tokens (multiple Refresh Token Families per User×Client remain allowed — ADR-0007).
+
+Password change / User create do **not** advance Not-Before in v1 — only explicit `set-not-before`. Deleting a User or Client is a separate hard-remove path; it does not require setting Not-Before first. Every successful `set-not-before` is an **Audit Event** (admin mutation), including entity identity and the new watermark instant (ADR-0039). Token Endpoint / AS failures that are solely Not-Before use the same client-visible errors as other invalid grants (`invalid_grant` or equivalent opaque failure); distinct reason codes stay in audit only. Refresh Token family reuse detection still runs when a retired member is presented (ADR-0007); Not-Before alone does not skip it.
+
+Consent Grants stay on their own Operator path (ADR-0055). This replaces the vague “CLI invalidate Refresh Tokens for User or Client” mechanism formerly implied by ADR-0007. No client-facing RFC 7009 endpoint (ADR-0003).

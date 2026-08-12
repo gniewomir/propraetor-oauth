@@ -65,8 +65,8 @@ A credential used to obtain new Access Tokens from the Token Endpoint. Issued to
 _Avoid_: calling this an Access Token; JWT refresh; HttpOnly cookie transport (v2 crossroad only)
 
 **Refresh Token Family**:
-Project security term: the lineage of Refresh Tokens from successive rotations after one Authorization Code redemption. Reuse of a retired member invalidates the entire family. Not an RFC 6749 term.
-_Avoid_: session (overloaded), token chain
+Project security term: the lineage of Refresh Tokens from successive rotations after one Authorization Code redemption. The same User×Client may have multiple concurrent families. Reuse of a retired member invalidates that entire family only. Not an RFC 6749 term.
+_Avoid_: session (overloaded), token chain; one family per User×Client
 
 **Bearer Token**:
 An Access Token presented using the HTTP Authorization scheme defined by RFC 6750. This project accepts `Authorization: Bearer` only.
@@ -147,6 +147,10 @@ _Avoid_: config file (too generic); policy (alone — overloaded with Consent an
 **Authorization Session**:
 Server-side state (stored in Postgres) that ties an in-progress Authorization Request across login and Consent, referenced by an opaque cookie. Hardened per ADR-0048 and ADR-0064 (HttpOnly/Secure/`__Host-` when https, SameSite, CSRF, fixation rotation, bound request fields).
 _Avoid_: browser session (vague), JWT session; not an RFC 6749 term
+
+**Not-Before**:
+An Operator-set instant on a User or on a Client. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use; already-issued Access Tokens at Resource Servers remain valid until exp. Framing is “all tokens” so future ID tokens share the same rule when OIDC is introduced.
+_Avoid_: revoke-tokens, token revocation (as the Operator action; RFC 7009 is separate), per-token invalidation (as the primary Operator model)
 
 **Audit Event**:
 A recorded security-relevant fact (e.g. login failure, token issue, admin mutation, rate-limit trip). Persisted in Postgres and emitted as structured stdout/stderr. May reference related entity ids; never stores raw secrets.

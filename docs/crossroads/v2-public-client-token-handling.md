@@ -70,7 +70,7 @@ Unified semantics, split delivery (native JSON vs browser cookie/session API). *
 
 - Short Access Token TTL (warn >5m, refuse start >15m — ADR-0047)
 - Rotating opaque refresh + family reuse detection (ADR-0007)
-- Operator CLI Refresh Token invalidation (ADR-0007)
+- Operator Not-Before on User or Client (`set-not-before` — ADR-0069)
 - No client-facing RFC 7009 (ADR-0003)
 - Public Clients: PKCE S256 + state (ADR-0023, 0004)
 

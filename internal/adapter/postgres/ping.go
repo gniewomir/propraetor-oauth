@@ -9,7 +9,7 @@ import (
 )
 
 // Ping opens storage at storageURL and runs SELECT 1 (ADR-0072 verify).
-func Ping(ctx context.Context, storageURL string) error {
+func Ping(ctx context.Context, storageURL string) (err error) {
 	if storageURL == "" {
 		return fmt.Errorf("empty storage URL")
 	}
@@ -17,10 +17,14 @@ func Ping(ctx context.Context, storageURL string) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() {
+		if cerr := db.Close(); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
 
 	var one int
-	if err := db.QueryRowContext(ctx, "SELECT 1").Scan(&one); err != nil {
+	if err = db.QueryRowContext(ctx, "SELECT 1").Scan(&one); err != nil {
 		return err
 	}
 	if one != 1 {

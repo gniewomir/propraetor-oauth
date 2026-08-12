@@ -9,6 +9,7 @@ readonly PROJECT_ROOT
 
 MODULE_PACKAGES="./..."
 CMD_PACKAGE="./cmd/oauth"
+E2E_PACKAGES="./e2e/..."
 BIN_DIR="${PROJECT_ROOT}/bin"
 BIN_NAME="oauth"
 
@@ -73,4 +74,20 @@ project_lint() {
 project_quality() {
   project_format
   project_lint
+}
+
+# unit_packages lists module packages excluding e2e.
+unit_packages() {
+  (cd "${PROJECT_ROOT}" && go list ./... | grep -v '/e2e$')
+}
+
+# go_test_args_have_package returns 0 if any arg looks like a package pattern.
+go_test_args_have_package() {
+  local a
+  for a in "$@"; do
+    case "$a" in
+      ./* | ../* | github.com/*) return 0 ;;
+    esac
+  done
+  return 1
 }

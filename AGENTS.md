@@ -11,3 +11,7 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 ### Domain docs
 
 Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
+
+### Testing
+
+Use `scripts/test-unit.sh` and `scripts/test-e2e.sh` (not a combined `test.sh`). See `docs/agents/testing.md`.

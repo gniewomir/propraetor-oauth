@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 
 	"github.com/gniewomir/propraetor-oauth/internal/adapter/postgres"
 	"github.com/spf13/cobra"
@@ -14,10 +17,31 @@ func newStorageCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "storage",
 		Short: "Postgres storage maintenance",
-		Long:  "Postgres app-role bootstrap SQL for Operators (ADR-0072).",
+		Long:  "Postgres app-role bootstrap and connectivity verify for Operators (ADR-0072).",
 	}
 	cmd.AddCommand(newStorageBootstrapSQLCommand())
+	cmd.AddCommand(newStorageVerifyCommand())
 	return cmd
+}
+
+func newStorageVerifyCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "verify",
+		Short: "Check OAUTH_STORAGE_URL and storage connectivity",
+		Long:  "Requires OAUTH_STORAGE_URL; runs a connectivity check (SELECT 1). Does not ensure Storage schema migrations yet (ADR-0072).",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			url := strings.TrimSpace(os.Getenv("OAUTH_STORAGE_URL"))
+			if url == "" {
+				return fmt.Errorf("OAUTH_STORAGE_URL is not set")
+			}
+			if err := storagePing(cmd.Context(), url); err != nil {
+				return fmt.Errorf("storage: connection failed")
+			}
+			_, err := fmt.Fprintln(cmd.OutOrStdout(), "storage: ok")
+			return err
+		},
+	}
 }
 
 func newStorageBootstrapSQLCommand() *cobra.Command {
@@ -76,4 +100,12 @@ func stubBootstrapPassword(fn func() (string, error)) func() {
 	prev := bootstrapPassword
 	bootstrapPassword = fn
 	return func() { bootstrapPassword = prev }
+}
+
+var storagePing = postgres.Ping
+
+func stubStoragePing(fn func(context.Context, string) error) func() {
+	prev := storagePing
+	storagePing = fn
+	return func() { storagePing = prev }
 }

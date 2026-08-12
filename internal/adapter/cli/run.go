@@ -29,6 +29,7 @@ func newRootCommand() *cobra.Command {
 	root.AddCommand(
 		newServerCommand(),
 		newPolicyCommand(),
+		newStorageCommand(),
 		newClientCommand(),
 		newUserCommand(),
 		newScopeCommand(),

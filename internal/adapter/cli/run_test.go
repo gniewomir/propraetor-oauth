@@ -21,7 +21,7 @@ func TestRootHelpListsTopLevelCommands(t *testing.T) {
 	}
 
 	help := out.String()
-	for _, name := range []string{"server", "policy", "client", "user", "scope", "consent", "purge"} {
+	for _, name := range []string{"server", "policy", "storage", "client", "user", "scope", "consent", "purge"} {
 		if !strings.Contains(help, name) {
 			t.Errorf("root help missing %q:\n%s", name, help)
 		}

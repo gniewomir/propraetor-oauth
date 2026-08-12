@@ -141,8 +141,16 @@ The single Operator-facing binary. Subcommands select mode: **server** runs the 
 _Avoid_: admin API, control plane (as separate products)
 
 **Server Policy**:
-The Operator-authored file of Access Token / Refresh Token / Authorization Code / Authorization Session lifetimes and rate-limit thresholds and windows. Required to start **server** mode; not used by admin subcommands.
+The Operator-authored file of Access Token / Refresh Token / Authorization Code / Authorization Session lifetimes and rate-limit thresholds and windows. Required to start **server** mode; not used by admin subcommands. Its shape is the Policy schema.
 _Avoid_: config file (too generic); policy (alone — overloaded with Consent and Authorization Grant)
+
+**Policy schema**:
+The closed set of keys a Server Policy file must contain; unknown keys are rejected. Distinct from the Storage schema.
+_Avoid_: bare schema; closed schema (as the name — prefer Policy schema)
+
+**Storage schema**:
+The versioned Postgres structure the Authorization Server expects for persisted state. Advanced by Operator CLI storage migrate commands. Distinct from the Policy schema.
+_Avoid_: bare schema; calling this Server Policy
 
 **Authorization Session**:
 Server-side state (stored in Postgres) that ties an in-progress Authorization Request across login and Consent, referenced by an opaque cookie. Hardened per ADR-0048 and ADR-0064 (HttpOnly/Secure/`__Host-` when https, SameSite, CSRF, fixation rotation, bound request fields).

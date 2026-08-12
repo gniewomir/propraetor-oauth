@@ -1,39 +1,58 @@
 # Testing
 
-How agents should run tests in this repo.
+How agents should run tests and how suites treat Postgres.
+
+Decision record: [ADR-0073](../adr/0073-test-suite-storage-isolation.md). Research background: [go-test-database-mutations](../research/go-test-database-mutations.md).
 
 ## Runners
 
 | Script | Role |
 | --- | --- |
-| `./scripts/test-unit.sh` | Format + lint (`project_quality`), then `go test -race` for the module **excluding** `./e2e/...` |
-| `./scripts/test-e2e.sh` | Format + lint, ensure disposable test storage, build `bin/oauth`, then `go test -race ./e2e/...` |
+| `./scripts/test-unit.sh` | Format + lint (`project_quality`), then `go test -race` for the module **excluding** `./e2e/...` (no Postgres) |
+| `./scripts/test-e2e.sh` | Format + lint, ensure e2e test storage, build `bin/oauth`, then `go test -race ./e2e/...` |
 
-Both accept extra **`go test` args** (same pattern as the former `scripts/test.sh`), e.g. `-run`, `-count`, package paths.
+Both accept extra **`go test` args** (e.g. `-run`, `-count`, package paths).
 
 ```bash
-# Full unit suite
 ./scripts/test-unit.sh
-
-# Narrow unit tests by name / package
 ./scripts/test-unit.sh -run Bootstrap -count=1 ./internal/adapter/postgres/
 
-# Full e2e suite (requires Podman; fail-closed if storage cannot be ensured)
 ./scripts/test-e2e.sh
-
-# Narrow e2e
 ./scripts/test-e2e.sh -run Verify -count=1
 ```
 
 Do **not** use a generic `./scripts/test.sh` — use `test-unit` or `test-e2e` explicitly.
 
-## E2E requirements
+Integration and migrator-e2e runners are not wired yet; when added, each must use its **own** `storage.sh` env (never share e2e’s DB, never use `dev`).
 
-- E2E lives in `e2e/` at the repo root and drives the **`bin/oauth` subprocess** (exit codes and Operator messages), not in-process `cli.Run` alone.
-- `test-e2e.sh` runs `./scripts/storage.sh ensure --env test`, loads `.local/oauth-storage/test.env` (`OAUTH_STORAGE_URL`, `OAUTH_STORAGE_ENV=test`), then runs the suite.
-- If Podman / test storage is unavailable, **e2e fails closed** (non-zero). Do not treat a skip as green.
-- Prefer `--env test` only; do not point e2e at the `dev` database.
+## Storage helpers
 
-## `oauth storage verify` (e2e target)
+| Command | When |
+| --- | --- |
+| `./scripts/storage.sh ensure --env <suite>` | Suite runner only (or local DX). Fail closed if Podman/storage unavailable — no skip-as-green. |
+| `./scripts/storage.sh create\|remove --env <suite>` | Recreate/teardown disposable DB for that env |
 
-Behavior and locked strings are in [ADR-0072](../adr/0072-operator-storage-cli.md): missing URL, connection failure, and success (`storage: ok`). E2E should assert those exit codes and substrings. Schema/migration checks are **not** part of `verify` yet.
+After ensure, load `.local/oauth-storage/<env>.env` (`OAUTH_STORAGE_URL`, `OAUTH_STORAGE_ENV`). Today e2e uses `--env test`. Do not point any suite at `dev`.
+
+Suite bootstrap (once per run): **ensure → truncate → migrate to Storage schema head**. Per-test cleanup differs by suite (below). Truncate/migrate wiring may still be incomplete in runners; follow ADR-0073 when adding it.
+
+## Suite constraints
+
+| Suite | Process | DB | Per-test isolation | Parallel |
+| --- | --- | --- | --- | --- |
+| Unit | in-process | none | — | yes |
+| Integration | in-process | own disposable DB | transaction + rollback; always empty | yes (default) |
+| E2E | `bin/oauth` subprocess | own disposable DB | unique IDs; no harness tx; no mid-suite truncate | yes (default) |
+| Migrator e2e | subprocess | own disposable DB | owns schema version; serial | no |
+
+Shared rules for Integration and E2E:
+
+- Prefer real APIs for fixtures (ports/adapters in-process; Operator CLI in e2e). Direct DB surgery only with a strong reason.
+- Irrelevant fields: random. Relevant fields: explicit in the test.
+- Never wrap `exec` of `bin/oauth` in a harness transaction expecting rollback to undo CLI commits.
+
+E2E lives in `e2e/` and asserts Operator **exit codes and messages**, not in-process `cli.Run` alone.
+
+## `oauth storage verify` (current e2e target)
+
+Locked strings and exits: [ADR-0072](../adr/0072-operator-storage-cli.md). Schema/migration checks are **not** part of `verify` yet.

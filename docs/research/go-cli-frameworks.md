@@ -9,7 +9,9 @@ Scope: pick an argv / subcommand approach for the single Operator-facing binary 
 
 ## Executive summary / verdict
 
-**Recommend `github.com/urfave/cli/v3` as the first CLI dependency** for the Operator binary scaffold.
+> **Locked (ADR-0070):** Operator CLI uses **`github.com/spf13/cobra`** (+ required `pflag`); **no Viper**; tree and wiring in `internal/adapter/cli`. The recommendation below was the research default before that decision; keep it for trade-off context only.
+
+**Research default (superseded for this repo):** `github.com/urfave/cli/v3` as the first CLI dependency for the Operator binary scaffold.
 
 Why this project:
 
@@ -298,6 +300,8 @@ Binary name as shipped: **`oauth`** (ADRs often say `cli` generically).
 ```text
 oauth
 ├── server                          # run AS; requires Server Policy (ADR-0068); risk flags (ADR-0067)
+├── policy
+│   └── init                        # write starter closed-schema TOML (ADR-0071); not runtime defaults
 ├── client
 │   ├── create
 │   ├── delete

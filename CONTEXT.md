@@ -140,6 +140,10 @@ _Avoid_: admin user (ambiguous with User), tenant admin
 The single Operator-facing binary. Subcommands select mode: **server** runs the AS process; other commands perform administration. Admin and server entrypoints are adapters over the domain (CLI → domain → persistence), not a second rules engine and not ad-hoc SQL.
 _Avoid_: admin API, control plane (as separate products)
 
+**Server Policy**:
+The Operator-authored file of Access Token / Refresh Token / Authorization Code / Authorization Session lifetimes and rate-limit thresholds and windows. Required to start **server** mode; not used by admin subcommands.
+_Avoid_: config file (too generic); policy (alone — overloaded with Consent and Authorization Grant)
+
 **Authorization Session**:
 Server-side state (stored in Postgres) that ties an in-progress Authorization Request across login and Consent, referenced by an opaque cookie. Hardened per ADR-0048 and ADR-0064 (HttpOnly/Secure/`__Host-` when https, SameSite, CSRF, fixation rotation, bound request fields).
 _Avoid_: browser session (vague), JWT session; not an RFC 6749 term

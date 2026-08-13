@@ -6,6 +6,3 @@ CREATE TABLE clients (
     deactivated_at timestamptz NULL,
     not_before     timestamptz NULL
 );
-
-CREATE UNIQUE INDEX clients_client_id_lower_uidx
-    ON clients (lower(client_id));

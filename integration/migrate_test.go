@@ -222,31 +222,6 @@ func TestMigrateClientsEmbeddedUpDown(t *testing.T) {
 		}
 	}
 
-	var indexExists bool
-	err = db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM pg_indexes
-			WHERE schemaname = 'public'
-			  AND tablename = 'clients'
-			  AND indexname = 'clients_client_id_lower_uidx'
-		)`).Scan(&indexExists)
-	if err != nil || !indexExists {
-		t.Fatalf("clients_client_id_lower_uidx missing: exists=%v err=%v", indexExists, err)
-	}
-
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO clients (client_id, auth_method, secret_hash, audience)
-		VALUES ('Acme', 'none', NULL, 'https://rs.example')`)
-	if err != nil {
-		t.Fatalf("insert: %v", err)
-	}
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO clients (client_id, auth_method, secret_hash, audience)
-		VALUES ('acme', 'none', NULL, 'https://rs.example')`)
-	if err == nil {
-		t.Fatal("expected unique violation for ASCII-case-only duplicate client_id")
-	}
-
 	ver, err = r.Down(ctx)
 	if err != nil {
 		t.Fatalf("Down: %v", err)

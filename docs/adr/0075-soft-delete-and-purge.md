@@ -1,5 +1,0 @@
-# Soft-delete for non-TTL rows; hard-delete only via purge
-
-Durable rows without a TTL (Clients, Users/End-Users, Scopes, Consent Grants, Redirect URI registrations, Refresh Token Families as lineage anchors, and similar catalog/grant state) are **never hard-deleted** in v1. Operator “delete” / revoke / retire is **soft-delete**: set `deactivated_at` (NULL means active); the row remains so foreign keys, audit references, and allowlists stay coherent; inactive entities cannot be used for new Authorization Grants or token issue. Every such deactivation or reactivation is an **Audit Event** (admin mutation, ADR-0039). **Not-Before** (ADR-0069) remains a separate compromise-response watermark and does not replace soft-delete.
-
-Hard-delete is allowed only for (1) entities that carry a TTL — expired Authorization Codes, Refresh Tokens, and Authorization Sessions — and (2) **Audit Events**, both exclusively through Operator `cli purge` (ADR-0060). `cli server` does not background-purge or lazily delete on access.

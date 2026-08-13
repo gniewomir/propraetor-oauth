@@ -430,7 +430,7 @@ Context: disposable Podman Postgres (`storage.sh ensure --env test`), e2e via `e
 Keep one test database from `storage.sh`. In `TestMain` or first test, ensure schema at head (`migrate --up` or rely on auto-migrate once). Each mutating test registers `t.Cleanup` that `TRUNCATE … CASCADE` (or deletes in FK-safe order) for app tables.  
 - *Pros:* Matches subprocess reality; simple mental model; fits fail-closed shared URL.  
 - *Cons:* Maintain truncate list; avoid `t.Parallel` on this package (or accept locking/flakes).  
-- *Fits:* admin create/update/revoke tests.
+- *Fits:* admin create/update/deactivate tests.
 
 **B. Unique IDs without truncate (optional for narrow CRUD)**  
 Factories mint unique client_id / username; assertions filter by those IDs; periodic or end-of-suite truncate.  

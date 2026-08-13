@@ -37,7 +37,7 @@ RFC 6819 requires **no cleartext storage** of credentials and **≥128 bits of e
 | --- | --- |
 | Codes & refresh: SHA-256 of handle at rest; plaintext only at issuance; no per-token salt | [ADR-0030](../adr/0030-hashed-codes-and-refresh.md), [ADR-0076](../adr/0076-handle-hash-no-per-token-salt.md) |
 | Argon2id (+ salt) for passwords / client secrets only | [ADR-0026](../adr/0026-argon2id-secrets.md), [ADR-0053](../adr/0053-argon2id-parameters.md) |
-| Soft-delete non-TTL rows; hard-delete TTL + audit via purge only | [ADR-0075](../adr/0075-soft-delete-and-purge.md) |
+| Deactivate non-TTL rows; hard-delete TTL + audit via purge only | [ADR-0075](../adr/0075-deactivate-and-purge.md) |
 | Refresh opaque; rotated on use; family reuse detection | CONTEXT.md; [ADR-0007](../adr/0007-refresh-token-lifecycle.md) |
 | Authorization Session: server-side Postgres state, opaque cookie | CONTEXT.md |
 | No cleartext credential storage; hash or encrypt | [RFC 6819 §5.1.4.1.3](https://www.rfc-editor.org/rfc/rfc6819.html#section-5.1.4.1.3) |
@@ -309,7 +309,7 @@ Refresh/offline tokens are JWTs bound to user/client sessions; “Revoke Refresh
 
 ## Recommendation for propraetor-oauth
 
-**Decided (ADR-0076 / 0077):** **E** — `SHA-256(full opaque handle)` as `bytea` PK; ≥128-bit CSPRNG; Argon2id for passwords and client secrets only (ADR-0026 / 0053). Soft-delete / purge is ADR-0075; CSRF derivation is ADR-0078 (orthogonal to handle storage).
+**Decided (ADR-0076 / 0077):** **E** — `SHA-256(full opaque handle)` as `bytea` PK; ≥128-bit CSPRNG; Argon2id for passwords and client secrets only (ADR-0026 / 0053). Deactivate / purge is ADR-0075; CSRF derivation is ADR-0078 (orthogonal to handle storage).
 
 ---
 
@@ -335,4 +335,4 @@ Refresh/offline tokens are JWTs bound to user/client sessions; “Revoke Refresh
 | Auth0 rotation + reuse detection | [Refresh Token Rotation](https://auth0.com/docs/secure/tokens/refresh-tokens/refresh-token-rotation) |
 | Keycloak revoke-refresh / offline sessions | [Keycloak Server Admin](https://www.keycloak.org/docs/latest/server_admin/#_offline-access) |
 | SHA-256 hashes of codes/tokens at rest | [cloudflare/workers-oauth-provider `storage-schema.md`](https://github.com/cloudflare/workers-oauth-provider/blob/main/storage-schema.md) |
-| Project ADRs | [0030](../adr/0030-hashed-codes-and-refresh.md), [0076](../adr/0076-handle-hash-no-per-token-salt.md), [0077](../adr/0077-persistence-keys.md), [0075](../adr/0075-soft-delete-and-purge.md), [0078](../adr/0078-csrf-derived-from-signing-key.md), [0007](../adr/0007-refresh-token-lifecycle.md) |
+| Project ADRs | [0030](../adr/0030-hashed-codes-and-refresh.md), [0076](../adr/0076-handle-hash-no-per-token-salt.md), [0077](../adr/0077-persistence-keys.md), [0075](../adr/0075-deactivate-and-purge.md), [0078](../adr/0078-csrf-derived-from-signing-key.md), [0007](../adr/0007-refresh-token-lifecycle.md) |

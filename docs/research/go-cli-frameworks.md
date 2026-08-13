@@ -36,7 +36,7 @@ Why this project:
 | Admin: CLI → domain → Postgres; no running server required | [ADR-0022](../adr/0022-admin-direct-postgres.md), [ADR-0033](../adr/0033-layered-adapters.md) |
 | Composition root: `internal/adapter/cli`; thin `cmd/oauth` | `cmd/oauth/main.go`, `internal/adapter/cli/doc.go`, ADR-0033 |
 | Stdlib-first; external modules only when necessary; screens are a separate pure-frontend rule | [ADR-0035](../adr/0035-stdlib-and-pure-screens.md) |
-| Likely admin surface: Client / User / Scope; Consent revoke; unified `purge`; User/Client `set-not-before`; `server` + Server Policy + production-risk ack | CONTEXT.md; ADR-0015/0020, 0055, 0060, 0069, 0062, 0067, 0068 |
+| Likely admin surface: Client / User / Scope; Consent deactivate/reactivate; unified `purge`; User/Client `set-not-before`; `server` + Server Policy + production-risk ack | CONTEXT.md; ADR-0015/0020, 0055, 0060, 0069, 0062, 0067, 0068 |
 | Today: Go module with **no dependencies**; `main` prints “not implemented” | `go.mod`, `cmd/oauth/main.go` |
 
 ---
@@ -304,32 +304,36 @@ oauth
 │   └── init                        # write starter closed-schema TOML (ADR-0071); not runtime defaults
 ├── client
 │   ├── create
-│   ├── delete
+│   ├── deactivate                  # ADR-0075
+│   ├── reactivate
 │   ├── list                        # optional for v1 scaffold discoverability
 │   ├── show
-│   ├── scope-add                   # assign Scope to Client (ADR-0015/0020) — exact verb TBD
-│   ├── scope-remove
+│   ├── allow                       # Scope on Client allowlist (ADR-0015/0020)
+│   ├── disallow
 │   └── set-not-before              # Client Not-Before; --at optional, now only (ADR-0069)
 ├── user                            # CLI synonym for End-User (CONTEXT.md)
 │   ├── create
-│   ├── delete
+│   ├── deactivate
+│   ├── reactivate
 │   ├── list
 │   ├── show
 │   ├── set-password                # named in ADR-0062; does not advance Not-Before
 │   └── set-not-before              # User Not-Before; --at optional, now only (ADR-0069)
 ├── scope
 │   ├── create
-│   ├── delete
+│   ├── deactivate
+│   ├── reactivate
 │   └── list
 ├── consent
-│   └── revoke                      # per End-User / End-User×Client / End-User×Client×Scope (ADR-0055)
-└── purge                           # --target=entities|audit|all --older-than (ADR-0060)
+│   ├── deactivate                  # per End-User / End-User×Client / End-User×Client×Scope (ADR-0055)
+│   └── reactivate
+└── purge                           # --target=entities|audit|all --older-than (ADR-0060); only hard-delete verb
 ```
 
 Notes:
 
 - Exact flag spellings for `server` (listen, Issuer URL, PEM paths, `--policy`, `--allow-http-issuer`, `--allow-cleartext-listen`, `--i-understand-production-risk`) are constrained by ADR-0067/0068 but need not be implemented in the first scaffold — help stubs can mention them when those commands grow.  
-- Prefer CONTEXT.md terms (`user` not “end-user” on the CLI; `client`; `scope`; `consent`; `purge`; `server`).
+- Prefer CONTEXT.md terms (`user` not “end-user” on the CLI; `client`; `scope`; `consent`; `deactivate` / `reactivate`; `allow` / `disallow`; `purge`; `server`).
 - Operator compromise response is **Not-Before** (`set-not-before`), not a `refresh-token invalidate` verb (ADR-0069).
 
 ---
@@ -352,7 +356,7 @@ If choosing **stdlib only**, a lighter ADR (or a note in an existing CLI ADR) sh
 
 1. **Accept first dependency now?** Prefer urfave/cli v3 for placeholders+help, or stay zero-dep with stdlib until the first real admin command?  
 2. **Cobra instead?** If Operators/docs authors already standardize on Cobra elsewhere, that may outweigh stdlib-light.  
-3. **Client scope verbs:** `client scope-add` vs `client allow-scope` vs nested `client scope add` — pick one nesting style before the tree hardens.  
+3. **Client allowlist verbs:** settled as `client allow` / `client disallow` (ADR-0075 / CONTEXT.md).  
 4. **Root help groups:** whether to group commands in help as “runtime” (`server`) vs “administration” (everything else) — both Cobra and urfave support categorisation-style UX; exact API differs.  
 5. **Completion / man pages in v1?** Optional; neither is required for the placeholder scaffold.
 

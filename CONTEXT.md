@@ -101,16 +101,16 @@ _Avoid_: callback URL (informal ok), wildcard redirect
 ### Scope and Resource Owner authorization
 
 **Scope**:
-A space-delimited access-right value from an Operator-managed catalog stored in the database. Names are case-sensitive (RFC 6749); the Operator CLI defines and deactivates Scopes (soft-delete) and assigns them to Clients; Access Tokens carry granted Scopes.
-_Avoid_: free-form scope strings; “fixed” catalog (implies compile-time); role (unless later aliased deliberately); delete Scope (as hard-remove); case-folding Scope names
+A space-delimited access-right value from an Operator-managed catalog stored in the database. Names are case-sensitive (RFC 6749); the Operator CLI defines and Deactivates Scopes and Allows them on Clients; Access Tokens carry granted Scopes.
+_Avoid_: free-form scope strings; “fixed” catalog (implies compile-time); role (unless later aliased deliberately); delete / soft-delete Scope; case-folding Scope names
 
 **Consent**:
-The AS UI step that obtains Resource Owner authorization for Scopes a Public Client has not already been granted by that Resource Owner. Maps to “obtaining authorization” in RFC 6749; not a separate RFC term.
-_Avoid_: permission dialog, OAuth prompt (as the domain term); do not treat Consent as required for Client Credentials
+The AS UI step that obtains Resource Owner authorization for Scopes a Public Client has not already been granted by that Resource Owner. Maps to “obtaining authorization” in RFC 6749; not a separate RFC term. Distinct from Operator Deactivate / Reactivate of Consent Grants.
+_Avoid_: permission dialog, OAuth prompt (as the domain term); do not treat Consent as required for Client Credentials; treating Consent UI as Operator Reactivate
 
 **Consent Grant**:
-A persisted approval that an End-User has authorized a specific Scope for a specific Public Client. Stored in Postgres; drives incremental Consent (ADR-0011, 0055). Invalidated when the Operator removes that Scope from the Client allowlist or soft-deletes (revokes) the Grant via CLI.
-_Avoid_: permission, entitlement, OAuth grant (ambiguous with Authorization Grant); hard-delete of Consent Grants
+A persisted approval that an End-User has authorized a specific Scope for a specific Public Client. Stored in Postgres; drives incremental Consent (ADR-0011, 0055). Invalidated when the Operator Disallows that Scope on the Client or Deactivates the Grant via CLI.
+_Avoid_: permission, entitlement, OAuth grant (ambiguous with Authorization Grant); revoke / soft-delete / hard-delete of Consent Grants
 
 ### JWT token profile (not RFC 6749 roles)
 
@@ -157,12 +157,28 @@ Server-side state (stored in Postgres) that ties an in-progress Authorization Re
 _Avoid_: browser session (vague), JWT session; not an RFC 6749 term
 
 **Not-Before**:
-An Operator-set instant on a User or on a Client. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use; already-issued Access Tokens at Resource Servers remain valid until exp. Framing is “all tokens” so future ID tokens share the same rule when OIDC is introduced. Separate from soft-delete/deactivate of catalog entities.
-_Avoid_: revoke-tokens, token revocation (as the Operator action; RFC 7009 is separate), per-token invalidation (as the primary Operator model); using Not-Before as a substitute for deactivating a User or Client
+An Operator-set instant on a User or on a Client. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use; already-issued Access Tokens at Resource Servers remain valid until exp. Framing is “all tokens” so future ID tokens share the same rule when OIDC is introduced. Separate from Deactivate of catalog entities.
+_Avoid_: revoke-tokens, token revocation (as the Operator action; RFC 7009 is separate), per-token invalidation (as the primary Operator model); using Not-Before as a substitute for Deactivating a User or Client
 
-**Soft-delete**:
-Operator retirement of a durable non-TTL entity (Client, User, Scope, Consent Grant, Redirect URI registration, and similar) by deactivating the row in place (`deactivated_at`). The row remains for referential integrity and audit; reactivation clears deactivation. Hard-remove of these entities is out of v1. TTL-bearing artifacts and Audit Events are hard-deleted only via purge. Deactivate and reactivate are Audit Events.
-_Avoid_: hard-delete / hard-remove (for catalog entities); purge (for non-TTL catalog rows)
+**Deactivate**:
+Operator action that retires a durable non-TTL entity (Client, User, Scope, Consent Grant, Redirect URI registration, and similar) in place so it cannot be used for new Authorization Grants or token issue; the row remains for referential integrity and audit. Every Deactivate is an Audit Event. Hard-remove of these entities is out of v1.
+_Avoid_: soft-delete, delete, revoke, retire (for catalog/grant Operator actions); Purge (for non-TTL catalog rows); conflating with retired Refresh Token Family members
+
+**Reactivate**:
+Operator action that clears a prior Deactivate on a durable non-TTL entity so it may be used again. Every Reactivate is an Audit Event. Distinct from End-User Consent (which may grant or restore a Consent Grant through the AS UI).
+_Avoid_: re-grant (as the Operator CLI verb); undelete; restore (vague)
+
+**Allow**:
+Operator action that adds a Scope to a Client’s allowlist via the CLI (`client allow`).
+_Avoid_: scope-add; assign scope (as the CLI verb)
+
+**Disallow**:
+Operator action that removes a Scope from a Client’s allowlist via the CLI (`client disallow`). Matching Consent Grants become invalid for incremental Consent.
+_Avoid_: scope-remove; remove scope (as the CLI verb); Deactivate (that retires the Scope catalog row or Grant)
+
+**Purge**:
+Operator action that hard-deletes TTL-bearing artifacts (expired Authorization Codes, Refresh Tokens, Authorization Sessions) and/or Audit Events via `cli purge` only. Non-TTL catalog and grant rows are never Purge targets.
+_Avoid_: delete / remove as Operator verbs outside Purge; background or lazy delete in `cli server`
 
 **Audit Event**:
 A recorded security-relevant fact (e.g. login failure, token issue, admin mutation, rate-limit trip). Persisted in Postgres and emitted as structured stdout/stderr. May reference related entity ids; never stores raw secrets.

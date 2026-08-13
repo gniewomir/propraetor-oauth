@@ -9,7 +9,8 @@ func newUserCommand() *cobra.Command {
 	}
 	cmd.AddCommand(
 		leaf("create", "Create a User"),
-		leaf("delete", "Delete a User"),
+		leaf("deactivate", "Deactivate a User"),
+		leaf("reactivate", "Reactivate a User"),
 		leaf("list", "List Users"),
 		leaf("show", "Show a User"),
 		leaf("set-password", "Set a User password (ADR-0062)"),

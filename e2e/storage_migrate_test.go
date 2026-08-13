@@ -37,8 +37,8 @@ func TestMigrateDownRefusedOutsideDevTest(t *testing.T) {
 	}
 }
 
-func TestMigrateUpAndDownEmptyHead(t *testing.T) {
-	// Serial: mutates storage_schema_migrations on shared e2e DB.
+func TestMigrateUpAndDownClients(t *testing.T) {
+	// Serial: mutates Storage schema on shared e2e DB.
 	url := strings.TrimSpace(os.Getenv("OAUTH_STORAGE_URL"))
 	if url == "" {
 		t.Fatal("OAUTH_STORAGE_URL required")
@@ -49,7 +49,7 @@ func TestMigrateUpAndDownEmptyHead(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("up exit = %d stdout=%q stderr=%q", code, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "storage: schema 0") {
+	if !strings.Contains(stdout, "storage: schema 1") {
 		t.Fatalf("up stdout = %q", stdout)
 	}
 

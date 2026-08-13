@@ -12,6 +12,10 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 
 Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
 
+### Coding standards
+
+How code should be written. See `CODING_STANDARDS.md`.
+
 ### Testing
 
-Use `scripts/test-unit.sh`, `scripts/test-integration.sh`, and `scripts/test-e2e.sh` (not a combined `test.sh`). See `docs/agents/testing.md`.
+Use `scripts/test-unit.sh`, `scripts/test-integration.sh`, and `scripts/test-e2e.sh`. See `docs/agents/testing.md`.

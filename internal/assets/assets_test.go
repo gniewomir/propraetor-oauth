@@ -8,20 +8,21 @@ import (
 	"github.com/gniewomir/propraetor-oauth/internal/assets"
 )
 
-func TestMigrationsFSHeadIsZero(t *testing.T) {
+func TestMigrationsFSHeadIsClients(t *testing.T) {
 	t.Parallel()
 
-	head, err := migrate.Head(assets.Migrations())
+	fsys := assets.Migrations()
+	head, err := migrate.Head(fsys)
 	if err != nil {
 		t.Fatalf("Head: %v", err)
 	}
-	if head != 0 {
-		t.Fatalf("head = %d, want 0 (no versioned SQL yet)", head)
+	if head != 1 {
+		t.Fatalf("head = %d, want 1", head)
 	}
 
-	// Ensure the FS is readable (embed of empty/keep tree).
-	_, err = fs.ReadDir(assets.Migrations(), ".")
-	if err != nil {
-		t.Fatalf("ReadDir: %v", err)
+	for _, name := range []string{"0001_clients.up.sql", "0001_clients.down.sql"} {
+		if _, err := fs.Stat(fsys, name); err != nil {
+			t.Fatalf("Stat %s: %v", name, err)
+		}
 	}
 }

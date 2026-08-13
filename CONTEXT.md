@@ -53,7 +53,7 @@ A credential representing the Resource Owner’s authorization (or, for Client C
 _Avoid_: permission, license
 
 **Authorization Code**:
-A one-time, short-lived Authorization Grant issued after Resource Owner authorization, exchanged at the Token Endpoint with PKCE. Only a salted hash plus algorithm metadata is stored at rest.
+A one-time, short-lived Authorization Grant issued after Resource Owner authorization, exchanged at the Token Endpoint with PKCE. Only a SHA-256 digest of the opaque handle is stored at rest.
 _Avoid_: auth code (informal ok), grant code
 
 **Access Token**:
@@ -61,7 +61,7 @@ A credential used to access Protected Resources. In this project: a JWT Bearer T
 _Avoid_: API key, session token
 
 **Refresh Token**:
-A credential used to obtain new Access Tokens from the Token Endpoint. Issued to all Public Clients on the Authorization Code grant in v1. Opaque; rotated on use; returned in the Token Endpoint JSON response and sent on refresh via the `refresh_token` parameter (RFC 6749). Only a salted hash plus algorithm metadata is stored at rest.
+A credential used to obtain new Access Tokens from the Token Endpoint. Issued to all Public Clients on the Authorization Code grant in v1. Opaque; rotated on use; returned in the Token Endpoint JSON response and sent on refresh via the `refresh_token` parameter (RFC 6749). Only a SHA-256 digest of the opaque handle is stored at rest.
 _Avoid_: calling this an Access Token; JWT refresh; HttpOnly cookie transport (v2 crossroad only)
 
 **Refresh Token Family**:
@@ -73,8 +73,8 @@ An Access Token presented using the HTTP Authorization scheme defined by RFC 675
 _Avoid_: token in query string, form-body bearer
 
 **Client Identifier**:
-The unique string assigned to each Client (`client_id`).
-_Avoid_: client name (as the identifier), app id
+The unique string assigned to each Client (`client_id`). Operator-supplied at provision time; natural primary key (exact match; create rejects ASCII-case-only duplicates).
+_Avoid_: client name (as the identifier), app id; AS-generated client_id (v1)
 
 **Client Authentication**:
 How a Confidential Client proves its identity at the Token Endpoint. In v1: `client_secret_basic` only. Public Clients use none (PKCE instead).
@@ -101,16 +101,16 @@ _Avoid_: callback URL (informal ok), wildcard redirect
 ### Scope and Resource Owner authorization
 
 **Scope**:
-A space-delimited access-right value from an Operator-managed catalog stored in the database. The Operator CLI defines and deletes Scopes and assigns them to Clients; Access Tokens carry granted Scopes.
-_Avoid_: free-form scope strings; “fixed” catalog (implies compile-time); role (unless later aliased deliberately)
+A space-delimited access-right value from an Operator-managed catalog stored in the database. Names are case-sensitive (RFC 6749); the Operator CLI defines and deactivates Scopes (soft-delete) and assigns them to Clients; Access Tokens carry granted Scopes.
+_Avoid_: free-form scope strings; “fixed” catalog (implies compile-time); role (unless later aliased deliberately); delete Scope (as hard-remove); case-folding Scope names
 
 **Consent**:
 The AS UI step that obtains Resource Owner authorization for Scopes a Public Client has not already been granted by that Resource Owner. Maps to “obtaining authorization” in RFC 6749; not a separate RFC term.
 _Avoid_: permission dialog, OAuth prompt (as the domain term); do not treat Consent as required for Client Credentials
 
 **Consent Grant**:
-A persisted approval that an End-User has authorized a specific Scope for a specific Public Client. Stored in Postgres; drives incremental Consent (ADR-0011, 0055). Invalidated when the Operator removes that Scope from the Client allowlist or revokes via CLI.
-_Avoid_: permission, entitlement, OAuth grant (ambiguous with Authorization Grant)
+A persisted approval that an End-User has authorized a specific Scope for a specific Public Client. Stored in Postgres; drives incremental Consent (ADR-0011, 0055). Invalidated when the Operator removes that Scope from the Client allowlist or soft-deletes (revokes) the Grant via CLI.
+_Avoid_: permission, entitlement, OAuth grant (ambiguous with Authorization Grant); hard-delete of Consent Grants
 
 ### JWT token profile (not RFC 6749 roles)
 
@@ -157,8 +157,12 @@ Server-side state (stored in Postgres) that ties an in-progress Authorization Re
 _Avoid_: browser session (vague), JWT session; not an RFC 6749 term
 
 **Not-Before**:
-An Operator-set instant on a User or on a Client. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use; already-issued Access Tokens at Resource Servers remain valid until exp. Framing is “all tokens” so future ID tokens share the same rule when OIDC is introduced.
-_Avoid_: revoke-tokens, token revocation (as the Operator action; RFC 7009 is separate), per-token invalidation (as the primary Operator model)
+An Operator-set instant on a User or on a Client. At the Authorization Server, all tokens and Authorization Sessions created before that instant are rejected on use; already-issued Access Tokens at Resource Servers remain valid until exp. Framing is “all tokens” so future ID tokens share the same rule when OIDC is introduced. Separate from soft-delete/deactivate of catalog entities.
+_Avoid_: revoke-tokens, token revocation (as the Operator action; RFC 7009 is separate), per-token invalidation (as the primary Operator model); using Not-Before as a substitute for deactivating a User or Client
+
+**Soft-delete**:
+Operator retirement of a durable non-TTL entity (Client, User, Scope, Consent Grant, Redirect URI registration, and similar) by deactivating the row in place (`deactivated_at`). The row remains for referential integrity and audit; reactivation clears deactivation. Hard-remove of these entities is out of v1. TTL-bearing artifacts and Audit Events are hard-deleted only via purge. Deactivate and reactivate are Audit Events.
+_Avoid_: hard-delete / hard-remove (for catalog entities); purge (for non-TTL catalog rows)
 
 **Audit Event**:
 A recorded security-relevant fact (e.g. login failure, token issue, admin mutation, rate-limit trip). Persisted in Postgres and emitted as structured stdout/stderr. May reference related entity ids; never stores raw secrets.
